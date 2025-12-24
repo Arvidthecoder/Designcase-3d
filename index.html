@@ -2,42 +2,30 @@
 <html lang="sv">
 <head>
   <meta charset="utf-8" />
-  <title>Design Your Case</title>
+  <title>3D Phone Case - Upload Image</title>
 
-  <!-- model-viewer (stabilast för mobil) -->
+  <!-- model-viewer -->
   <script type="module"
     src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js">
   </script>
 
   <style>
-    body {
-      margin: 0;
-      background: #f2f2f2;
-      font-family: Arial, sans-serif;
-      overflow: hidden;
-    }
-
-    model-viewer {
-      width: 100vw;
-      height: 100vh;
-      background: #f2f2f2;
-    }
-
+    body { margin: 0; background: #f2f2f2; overflow: hidden; font-family: sans-serif; }
+    model-viewer { width: 100vw; height: 100vh; background: #f2f2f2; }
     #controls {
       position: fixed;
-      top: 16px;
-      left: 16px;
+      top: 16px; left: 16px;
       z-index: 10;
       background: white;
       padding: 12px;
-      border-radius: 10px;
-      box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
     }
   </style>
 </head>
 <body>
 
-  <!-- UI -->
+  <!-- Controls -->
   <div id="controls">
     <input type="file" id="imageUpload" accept="image/*">
   </div>
@@ -54,7 +42,6 @@
     alt="3D Phone Case">
   </model-viewer>
 
-  <!-- SCRIPT -->
   <script>
     const viewer = document.getElementById('viewer');
     const input = document.getElementById('imageUpload');
@@ -63,26 +50,34 @@
       const file = event.target.files[0];
       if (!file) return;
 
-      // iOS-säker bildläsning
-      const bitmap = await createImageBitmap(file);
+      // Skapa image från fil
+      const img = new Image();
+      img.onload = async () => {
+        // Skapa canvas i bakgrunden
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
 
-      // Vänta tills modellen är laddad
-      await viewer.updateComplete;
+        await viewer.updateComplete;
 
-      // Hitta print-materialet
-      const material = viewer.model.materials.find(
-        m => m.name === 'PrintMaterial'
-      );
+        const material = viewer.model.materials.find(
+          m => m.name === 'PrintMaterial'
+        );
 
-      if (!material) {
-        alert('❌ PrintMaterial hittades inte. Kontrollera Blender.');
-        return;
-      }
+        if (!material) {
+          alert('❌ PrintMaterial hittades inte! Kontrollera Blender.');
+          return;
+        }
 
-      // Skapa texture korrekt (iOS + Android)
-      const texture = viewer.createTexture(bitmap);
+        // Skapa texture från canvas
+        const texture = viewer.createTexture(canvas);
+        material.pbrMetallicRoughness.baseColorTexture.setTexture(texture);
+      };
 
-      material.pbrMetallicRoughness.baseColorTexture.setTexture(texture);
+      // iOS-kompatibel filuppladdning
+      img.src = URL.createObjectURL(file);
     });
   </script>
 
